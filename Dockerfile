@@ -1,14 +1,12 @@
 ARG BASE_IMAGE
-FROM ${BASE_IMAGE:-library/python}:3.7-slim
+FROM ${BASE_IMAGE:-library/python}:3.7-alpine
 
 ARG QEMU_ARCH
 ENV QEMU_ARCH=${QEMU_ARCH:-x86_64} S6_KEEP_ENV=1
 
 COPY qemu/qemu-${QEMU_ARCH}-static /usr/bin/
 
-RUN set -x && apt-get update \
-  && apt-get install -y curl tzdata locales psmisc procps iputils-ping logrotate cron gcc \
-  && locale-gen en_US.UTF-8 \
+RUN set -x && apk add --no-cache coreutils shadow dcron curl tzdata gcc logrotate musl-dev \
   && case "${QEMU_ARCH}" in \
     x86_64) S6_ARCH='amd64';; \
     aarch64) S6_ARCH='aarch64';; \
@@ -24,9 +22,8 @@ RUN set -x && apt-get update \
   && useradd -u 911 -U -d /config -s /bin/false abc \
   && usermod -G users abc \
   && mkdir -p /app /config /defaults \
-  && apt-get clean \
-  && rm -rf /tmp/* /var/lib/apt/lists/* /var/tmp/* \
-  && rm -rf /etc/cron.daily/apt-compat /etc/cron.daily/dpkg /etc/cron.daily/passwd /etc/cron.daily/exim4-base \
+  && apk del --purge \
+  && rm -rf /tmp/*  \
   && sed -i "s#/var/log/messages {}.*# #g" /etc/logrotate.conf \
   && pip install lifx-photons-core python-crontab
 
